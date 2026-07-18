@@ -1,0 +1,260 @@
+version: '3.9'
+
+# ═══════════════════════════════════════════════════════════════
+# DataOS — Full Local Development Stack
+# Run: docker-compose up -d
+# ═══════════════════════════════════════════════════════════════
+
+x-common-env: &common-env
+  NODE_ENV: development
+  DATABASE_URL: postgresql://dataos:dataos_dev_pass@postgres:5432/dataos
+  REDIS_HOST: redis
+  REDIS_PORT: 6379
+  JWT_PRIVATE_KEY_PATH: /run/secrets/jwt_private_key
+  JWT_PUBLIC_KEY_PATH: /run/secrets/jwt_public_key
+  INTERNAL_API_KEY: dev_internal_key_change_in_prod
+  ALLOWED_ORIGINS: http://localhost:3000,http://localhost:5173
+  ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+  PHONE_HASH_SECRET: dev_phone_hash_secret
+  MSISDN_HASH_SECRET: dev_msisdn_hash_secret
+  NIN_HASH_SECRET: dev_nin_hash_secret
+  BVN_HASH_SECRET: dev_bvn_hash_secret
+  TERMII_API_KEY: ${TERMII_API_KEY}
+  AT_API_KEY: ${AT_API_KEY}
+  AT_USERNAME: ${AT_USERNAME}
+  MTN_API_BASE: ${MTN_API_BASE:-https://api.mtn.com}
+  MTN_CLIENT_ID: ${MTN_CLIENT_ID}
+  MTN_CLIENT_SECRET: ${MTN_CLIENT_SECRET}
+  AIRTEL_API_BASE: ${AIRTEL_API_BASE:-https://openapi.airtel.africa}
+  AIRTEL_CLIENT_ID: ${AIRTEL_CLIENT_ID}
+  AIRTEL_CLIENT_SECRET: ${AIRTEL_CLIENT_SECRET}
+  SMILE_PARTNER_ID: ${SMILE_PARTNER_ID}
+  SMILE_API_KEY: ${SMILE_API_KEY}
+  FCM_SERVER_KEY: ${FCM_SERVER_KEY}
+  CLAUDE_MODEL: claude-sonnet-4-6
+
+x-node-service: &node-service
+  build:
+    context: .
+    dockerfile: infrastructure/docker/Dockerfile.node
+  restart: unless-stopped
+  depends_on:
+    postgres:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+  networks:
+    - dataos-network
+
+services:
+  # ─── Infrastructure ─────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: dataos-postgres
+    environment:
+      POSTGRES_DB: dataos
+      POSTGRES_USER: dataos
+      POSTGRES_PASSWORD: dataos_dev_pass
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./database/migrations:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dataos -d dataos"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - dataos-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: dataos-redis
+    command: redis-server --requirepass dev_redis_pass --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "dev_redis_pass", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - dataos-network
+    environment:
+      REDIS_PASSWORD: dev_redis_pass
+
+  # ─── Microservices ──────────────────────────────────────────
+  auth-service:
+    <<: *node-service
+    container_name: dataos-auth
+    environment:
+      <<: *common-env
+      PORT: 3001
+      REDIS_PASSWORD: dev_redis_pass
+    ports:
+      - "3001:3001"
+    volumes:
+      - ./services/auth:/app/services/auth
+      - ./shared:/app/shared
+      - /app/services/auth/node_modules
+
+  user-service:
+    <<: *node-service
+    container_name: dataos-user
+    environment:
+      <<: *common-env
+      PORT: 3002
+      REDIS_PASSWORD: dev_redis_pass
+    ports:
+      - "3002:3002"
+    volumes:
+      - ./services/user:/app/services/user
+      - ./shared:/app/shared
+      - /app/services/user/node_modules
+
+  telecom-service:
+    <<: *node-service
+    container_name: dataos-telecom
+    environment:
+      <<: *common-env
+      PORT: 3003
+      REDIS_PASSWORD: dev_redis_pass
+    ports:
+      - "3003:3003"
+    volumes:
+      - ./services/telecom:/app/services/telecom
+      - ./shared:/app/shared
+      - /app/services/telecom/node_modules
+
+  ai-service:
+    <<: *node-service
+    container_name: dataos-ai
+    environment:
+      <<: *common-env
+      PORT: 3004
+      REDIS_PASSWORD: dev_redis_pass
+    ports:
+      - "3004:3004"
+    volumes:
+      - ./services/ai:/app/services/ai
+      - ./shared:/app/shared
+      - /app/services/ai/node_modules
+
+  wallet-service:
+    <<: *node-service
+    container_name: dataos-wallet
+    environment:
+      <<: *common-env
+      PORT: 3005
+      REDIS_PASSWORD: dev_redis_pass
+    ports:
+      - "3005:3005"
+    volumes:
+      - ./services/wallet:/app/services/wallet
+      - ./shared:/app/shared
+      - /app/services/wallet/node_modules
+
+  rewards-service:
+    <<: *node-service
+    container_name: dataos-rewards
+    environment:
+      <<: *common-env
+      PORT: 3006
+      REDIS_PASSWORD: dev_redis_pass
+    ports:
+      - "3006:3006"
+    volumes:
+      - ./services/rewards:/app/services/rewards
+      - ./shared:/app/shared
+      - /app/services/rewards/node_modules
+
+  analytics-service:
+    <<: *node-service
+    container_name: dataos-analytics
+    environment:
+      <<: *common-env
+      PORT: 3007
+      REDIS_PASSWORD: dev_redis_pass
+    ports:
+      - "3007:3007"
+    volumes:
+      - ./services/analytics:/app/services/analytics
+      - ./shared:/app/shared
+      - /app/services/analytics/node_modules
+
+  forecasting-service:
+    <<: *node-service
+    container_name: dataos-forecasting
+    environment:
+      <<: *common-env
+      PORT: 3008
+      REDIS_PASSWORD: dev_redis_pass
+    ports:
+      - "3008:3008"
+    volumes:
+      - ./services/forecasting:/app/services/forecasting
+      - ./shared:/app/shared
+      - /app/services/forecasting/node_modules
+
+  notification-service:
+    <<: *node-service
+    container_name: dataos-notification
+    environment:
+      <<: *common-env
+      PORT: 3009
+      REDIS_PASSWORD: dev_redis_pass
+    ports:
+      - "3009:3009"
+    volumes:
+      - ./services/notification:/app/services/notification
+      - ./shared:/app/shared
+      - /app/services/notification/node_modules
+
+  community-service:
+    <<: *node-service
+    container_name: dataos-community
+    environment:
+      <<: *common-env
+      PORT: 3010
+      REDIS_PASSWORD: dev_redis_pass
+    ports:
+      - "3010:3010"
+    volumes:
+      - ./services/community:/app/services/community
+      - ./shared:/app/shared
+      - /app/services/community/node_modules
+
+  # ─── API Gateway (Nginx as lightweight proxy for dev) ───────
+  gateway:
+    image: nginx:alpine
+    container_name: dataos-gateway
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./infrastructure/docker/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - auth-service
+      - user-service
+      - telecom-service
+      - ai-service
+      - wallet-service
+      - rewards-service
+      - analytics-service
+      - forecasting-service
+      - notification-service
+      - community-service
+    networks:
+      - dataos-network
+
+volumes:
+  postgres-data:
+  redis-data:
+
+networks:
+  dataos-network:
+    driver: bridge
+    name: dataos-network

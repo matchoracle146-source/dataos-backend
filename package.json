@@ -1,0 +1,31 @@
+{
+  "name": "dataos",
+  "version": "1.0.0",
+  "description": "DataOS — Africa's AI Connectivity Intelligence Platform",
+  "private": true,
+  "workspaces": [
+    "services/*",
+    "shared"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev:auth\" \"npm run dev:user\" \"npm run dev:telecom\" \"npm run dev:ai\" \"npm run dev:wallet\" \"npm run dev:rewards\" \"npm run dev:analytics\" \"npm run dev:forecasting\" \"npm run dev:notification\" \"npm run dev:community\"",
+    "dev:auth": "npm run dev --workspace=services/auth",
+    "dev:user": "npm run dev --workspace=services/user",
+    "dev:telecom": "npm run dev --workspace=services/telecom",
+    "dev:ai": "npm run dev --workspace=services/ai",
+    "dev:wallet": "npm run dev --workspace=services/wallet",
+    "dev:rewards": "npm run dev --workspace=services/rewards",
+    "dev:analytics": "npm run dev --workspace=services/analytics",
+    "dev:notification": "npm run dev --workspace=services/notification",
+    "dev:community": "npm run dev --workspace=services/community",
+    "test": "npm run test --workspaces",
+    "build": "npm run build --workspaces",
+    "db:migrate": "node scripts/migrate.js",
+    "db:seed": "node scripts/seed.js",
+    "lint": "eslint services/**/src/**/*.js"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.0",
+    "eslint": "^8.56.0"
+  }
+}

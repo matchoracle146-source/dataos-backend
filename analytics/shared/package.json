@@ -1,0 +1,14 @@
+{
+  "name": "@dataos/shared",
+  "version": "1.0.0",
+  "main": "utils/index.js",
+  "scripts": {
+    "test": "jest"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "nodemon": "^3.0.3",
+    "jest": "^29.7.0",
+    "supertest": "^6.3.4"
+  }
+}
